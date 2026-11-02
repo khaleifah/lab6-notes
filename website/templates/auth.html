@@ -2,7 +2,8 @@
 <div class="auth"><span class="badge">Server {{ instance }}</span><h1>{{ 'Create your account' if registering else 'Your notes, saved.' }}</h1>
 <p class="muted">{{ 'Create an account to keep a private collection of notes.' if registering else 'Sign in to open your personal notebook.' }}</p>
 <form class="panel" method="post"><input type="hidden" name="csrf" value="{{ csrf_token() }}">
-<label for="username">Username</label><input id="username" name="username" required minlength="3" maxlength="40" pattern="[a-zA-Z0-9_]+" autocomplete="username">
+<label for="username">Username</label><input id="username" name="username" required minlength="3" maxlength="40" autocomplete="username" autocapitalize="none" spellcheck="false" aria-describedby="username-help" value="{{ request.form.get('username', '') }}">
+<p id="username-help" class="muted small">Use 3–40 letters, numbers, or underscores, for example <code>khaleifah_lab6</code>.</p>
 <label for="password">Password</label><input id="password" type="password" name="password" required minlength="10" maxlength="128" autocomplete="{{ 'new-password' if registering else 'current-password' }}">
 <button class="full">{{ 'Create account' if registering else 'Sign in' }}</button></form>
 <p class="small">{% if registering %}Already registered? <a href="{{ url_for('login') }}">Sign in</a>{% else %}New here? <a href="{{ url_for('register') }}">Create an account</a>{% endif %}</p></div>
