@@ -1,0 +1,5 @@
+region            = "eu-west-1"
+availability_zone = "eu-west-1a"
+key_pair_name     = "khaleifah-lab6-key"
+bundle_id         = "micro_3_0"
+first_name        = "khaleifah"

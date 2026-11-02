@@ -1,0 +1,24 @@
+Checks completed while preparing this package
+
+PASS Python source syntax
+PASS Bash script syntax
+PASS YAML parsing of Compose and Ansible files
+PASS Sample-value substitution and YAML parsing for Compose templates
+PASS Inventory generation using sample OpenTofu output and a test file path
+PASS Shared-secret file permissions and preservation on rerun
+PASS IAM policy JSON parsing
+PASS HCL delimiter checks
+PASS Source scan for generated credentials, state files and unwanted line endings
+
+Not run in the preparation environment
+
+OpenTofu initialization/provider validation and AWS deployment
+Ansible syntax-check or execution using an installed Ansible runtime
+Docker build, Flask/PostgreSQL runtime and functional smoke test
+Nginx runtime validation, public IP certificate issuance or renewal
+Live Cloudflare access, browser authentication or instance failover
+PowerShell script execution on Windows
+
+Installable runtime dependencies and AWS access were unavailable here. The
+walkthrough includes the commands to validate these stages on your deployment.
+Do not treat a syntax check as evidence that a cloud experiment succeeded.

@@ -1,0 +1,11 @@
+services:
+  web:
+    build: /opt/website/website
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      DATABASE_URL: "postgresql://labnotes:{{ db_password }}@{{ hostvars['db'].private_ip }}:5432/labnotes"
+      SECRET_KEY: "{{ app_secret }}"
+      COOKIE_SECURE: "true"
+      APP_INSTANCE: "{{ inventory_hostname }}"

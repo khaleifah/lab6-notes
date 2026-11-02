@@ -1,0 +1,167 @@
+---
+- name: Prepare four Ubuntu instances
+  hosts: all
+  become: true
+  gather_facts: false
+  vars_files: [settings.yml, secrets.yml]
+  pre_tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 600
+    - name: Wait for launch script to complete
+      ansible.builtin.command: cloud-init status --wait
+      changed_when: false
+    - name: Gather operating system facts
+      ansible.builtin.setup:
+  tasks:
+    - name: Install container tools
+      ansible.builtin.apt:
+        name: [docker.io, docker-compose-v2, git, curl]
+        state: present
+        update_cache: true
+    - name: Start Docker
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+    - name: Create configuration directory
+      ansible.builtin.file:
+        path: /opt/lab6
+        state: directory
+        mode: '0700'
+
+- name: Configure shared PostgreSQL service
+  hosts: db
+  become: true
+  gather_facts: false
+  vars_files: [settings.yml, secrets.yml]
+  tasks:
+    - name: Create readable database configuration mount
+      ansible.builtin.file:
+        path: /opt/lab6/config
+        state: directory
+        mode: '0755'
+    - name: Restrict database clients to the two private web IPs
+      ansible.builtin.copy:
+        dest: /opt/lab6/config/pg_hba.conf
+        mode: '0644'
+        content: |
+          local all all trust
+          host all all {{ hostvars['web1'].private_ip }}/32 scram-sha-256
+          host all all {{ hostvars['web2'].private_ip }}/32 scram-sha-256
+    - name: Write database Compose file
+      ansible.builtin.template:
+        src: templates/db-compose.yml.j2
+        dest: /opt/lab6/compose.yml
+        mode: '0600'
+      no_log: true
+    - name: Start database
+      ansible.builtin.command: docker compose -f /opt/lab6/compose.yml up -d
+      register: db_start
+      changed_when: "'Started' in db_start.stderr or 'Created' in db_start.stderr or 'Recreated' in db_start.stderr"
+    - name: Reload database authentication rules
+      ansible.builtin.command: docker compose -f /opt/lab6/compose.yml exec -T db psql -U labnotes -d labnotes -c 'SELECT pg_reload_conf();'
+      register: db_ready
+      until: db_ready.rc == 0
+      retries: 30
+      delay: 3
+      changed_when: false
+
+- name: Configure the two website instances
+  hosts: web
+  become: true
+  gather_facts: false
+  vars_files: [settings.yml, secrets.yml]
+  tasks:
+    - name: Download public website source
+      ansible.builtin.git:
+        repo: "{{ repository_url }}"
+        dest: /opt/website
+        version: "{{ repository_version }}"
+    - name: Install Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+    - name: Write website Compose file
+      ansible.builtin.template:
+        src: templates/web-compose.yml.j2
+        dest: /opt/lab6/compose.yml
+        mode: '0600'
+      no_log: true
+    - name: Build website image
+      ansible.builtin.command: docker compose -f /opt/lab6/compose.yml build web
+      changed_when: true
+    - name: Initialize schema exactly once in this play
+      ansible.builtin.command: docker compose -f /opt/lab6/compose.yml run --rm web flask --app app:create_app init-db
+      run_once: true
+      changed_when: false
+    - name: Start application
+      ansible.builtin.command: docker compose -f /opt/lab6/compose.yml up -d web
+      register: web_start
+      changed_when: "'Started' in web_start.stderr or 'Created' in web_start.stderr or 'Recreated' in web_start.stderr"
+    - name: Configure each web reverse proxy
+      ansible.builtin.template:
+        src: templates/web-nginx.conf.j2
+        dest: /etc/nginx/sites-available/lab6
+        mode: '0644'
+    - name: Remove default virtual host
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+    - name: Enable virtual host
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/lab6
+        dest: /etc/nginx/sites-enabled/lab6
+        state: link
+    - name: Validate Nginx
+      ansible.builtin.command: nginx -t
+      changed_when: false
+    - name: Reload Nginx
+      ansible.builtin.systemd:
+        name: nginx
+        enabled: true
+        state: reloaded
+    - name: Verify website and shared DB connection
+      ansible.builtin.uri:
+        url: http://127.0.0.1/health
+        status_code: 200
+      register: health
+      until: health.status == 200
+      retries: 30
+      delay: 3
+
+- name: Configure Nginx load balancer
+  hosts: lb
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Install Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+    - name: Write round robin upstream configuration
+      ansible.builtin.template:
+        src: templates/lb-nginx.conf.j2
+        dest: /etc/nginx/sites-available/lab6
+        mode: '0644'
+    - name: Remove default virtual host
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+    - name: Enable virtual host
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/lab6
+        dest: /etc/nginx/sites-enabled/lab6
+        state: link
+    - name: Validate Nginx
+      ansible.builtin.command: nginx -t
+      changed_when: false
+    - name: Reload load balancer
+      ansible.builtin.systemd:
+        name: nginx
+        enabled: true
+        state: reloaded
+    - name: Verify end to end connection
+      ansible.builtin.uri:
+        url: http://127.0.0.1/health
+        status_code: 200

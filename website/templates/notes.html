@@ -1,0 +1,9 @@
+{% extends 'base.html' %}{% block content %}
+<div class="row"><div><span class="badge">Server {{ instance }}</span><h1>{{ session.username }}’s notebook</h1><p class="muted">Your records are saved in PostgreSQL.</p></div>
+<form action="{{ url_for('logout') }}" method="post"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="secondary">Sign out</button></form></div>
+<form class="panel" action="{{ url_for('add_note') }}" method="post"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><label for="body">Add a note</label><textarea name="body" id="body" required maxlength="2000" placeholder="What would you like to remember?"></textarea><button style="margin-top:14px">Save note</button></form>
+<h2>Saved notes <span class="muted">{{ notes|length }}</span></h2>
+{% for note in notes %}<article class="panel"><p class="note">{{ note.body }}</p><div class="row"><span class="muted small">Record {{ note.id }} · {{ note.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</span>
+<form action="{{ url_for('delete_note', note_id=note.id) }}" method="post"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="secondary">Delete</button></form></div></article>
+{% else %}<p class="muted">No notes yet. Save your first note above.</p>{% endfor %}
+{% endblock %}

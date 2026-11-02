@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    command: ["postgres", "-c", "hba_file=/etc/lab6/pg_hba.conf"]
+    environment:
+      POSTGRES_DB: labnotes
+      POSTGRES_USER: labnotes
+      POSTGRES_PASSWORD: "{{ db_password }}"
+    ports:
+      - "{{ private_ip }}:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - /opt/lab6/config:/etc/lab6:ro
+volumes:
+  pgdata:

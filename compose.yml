@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: labnotes
+      POSTGRES_USER: labnotes
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/setup-single.sh}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U labnotes -d labnotes"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  web:
+    build: ./website
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      DATABASE_URL: postgresql://labnotes:${POSTGRES_PASSWORD}@db:5432/labnotes
+      SECRET_KEY: ${SECRET_KEY:?Run scripts/setup-single.sh}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      APP_INSTANCE: web1
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  pgdata:

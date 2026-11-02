@@ -1,0 +1,14 @@
+CCEN 448 LAB 6
+
+README.md describes the website and its execution requirements.
+LAB_GUIDE.md contains the Windows walkthrough for the main lab.
+EXTRA_CREDIT.md covers direct IP HTTPS and the two-web-server deployment.
+REPORT_GUIDE.md maps screenshots and written explanations to deliverables.
+VALIDATION.txt records preparation checks and limitations.
+
+The repository configures Ireland eu-west-1, the regional Lightsail key
+khaleifah-lab6-key, and this public GitHub repository. Confirm account-specific
+bundle eligibility and review tofu plan before creating cloud resources.
+
+Never commit AWS keys, PEM files, CSV credential exports, .env, secrets.yml,
+raw OpenTofu state/plans, or the screenshot evidence archive.
